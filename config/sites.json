@@ -1,0 +1,11 @@
+{
+  "_commento": "Selettori CSS per dominio. Lo scraper prova questi in ordine, poi ricade su JSON-LD, meta tag ed euristica. Un sito che non è qui può funzionare lo stesso: provalo con 'add'. Per aggiungerne uno: tasto destro sul prezzo > Ispeziona > copia una classe stabile.",
+
+  "_esempio": "www.esempio-shop.it qui sotto è solo un modello per mostrare il formato: sostituiscilo con i siti che usi tu. Lascia 'prezzo': [] se JSON-LD/meta tag bastano già (funziona su molti e-commerce senza configurare nulla).",
+
+  "www.esempio-shop.it": {
+    "nome": "Esempio Shop",
+    "prezzo": ["span.product-price__current", ".price"],
+    "titolo": ["h1"]
+  }
+}

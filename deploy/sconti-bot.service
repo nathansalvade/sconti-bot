@@ -1,0 +1,24 @@
+[Unit]
+Description=sconti-bot — avvisi Telegram sui cali di prezzo
+After=network-online.target
+Wants=network-online.target
+# se va in crash 5 volte in 5 minuti si arrende invece di ciclare all'infinito
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+[Service]
+Type=simple
+# Sostituisci con il tuo utente/percorso di installazione.
+User=CAMBIAMI
+Group=CAMBIAMI
+WorkingDirectory=/home/CAMBIAMI/sconti-bot
+ExecStart=/home/CAMBIAMI/sconti-bot/.venv/bin/python bot.py
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

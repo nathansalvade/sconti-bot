@@ -1,0 +1,4 @@
+aiohttp>=3.9
+beautifulsoup4>=4.12
+lxml>=5.0
+python-telegram-bot[job-queue]>=21.0
