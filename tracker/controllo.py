@@ -4,10 +4,13 @@ Sta in un modulo suo perché lo usano sia il bot (job periodico) sia la CLI:
 la regola di "quando avvisare" dev'essere una sola.
 """
 
+import os
 from dataclasses import dataclass
 
-from . import db
+from . import db, notifier
 from .scraper import Rilevazione, Scraper, ScrapeError
+
+SOGLIA_PREDEFINITA = 1.0  # percentuale: usata se MIN_DROP_PERCENT manca o non è valida
 
 
 @dataclass
@@ -28,8 +31,25 @@ def _valuta(esito):
     return esito.rilevazione.valuta if esito.ok else esito.prodotto["valuta"]
 
 
-async def controlla(conn, soglia_percentuale=1.0, scraper=None):
+def soglia_minima():
+    """Legge MIN_DROP_PERCENT dall'.env: la percentuale di calo minima per avvisare.
+
+    Un valore mancante o non numerico ricade sul default. Una soglia negativa non
+    ha senso (finirebbe per far scattare l'avviso sugli aumenti di prezzo, vedi
+    `controlla`), quindi ricade sul default anche lei.
+    """
+    notifier.carica_env()
+    try:
+        valore = float(os.environ.get("MIN_DROP_PERCENT", SOGLIA_PREDEFINITA))
+    except ValueError:
+        return SOGLIA_PREDEFINITA
+    return valore if valore >= 0 else SOGLIA_PREDEFINITA
+
+
+async def controlla(conn, soglia_percentuale=None, scraper=None):
     """Controlla tutti i prodotti in parallelo. Non scrive nulla sul DB."""
+    if soglia_percentuale is None:
+        soglia_percentuale = soglia_minima()
     prodotti = db.elenca(conn)
     if not prodotti:
         return []
@@ -62,7 +82,10 @@ async def controlla(conn, soglia_percentuale=1.0, scraper=None):
 
         sotto_target = target is not None and prezzo <= target
         calo = ((esito.precedente - prezzo) / esito.precedente * 100) if esito.precedente else 0
-        calo_vero = esito.precedente is not None and calo >= soglia_percentuale
+        # `calo > 0` è necessario oltre al confronto con la soglia: con soglia 0
+        # (chi vuole "avvisami su qualsiasi calo") `calo >= soglia_percentuale`
+        # sarebbe vera anche a prezzo invariato o in aumento, e avviserebbe sempre.
+        calo_vero = esito.precedente is not None and calo > 0 and calo >= soglia_percentuale
         # non ripetere un avviso già mandato allo stesso prezzo (o superiore)
         gia_visto = avvisato is not None and prezzo >= avvisato
 

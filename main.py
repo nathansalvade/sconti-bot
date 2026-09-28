@@ -13,19 +13,10 @@ Per l'uso normale conviene il bot interattivo:  python bot.py
 
 import argparse
 import asyncio
-import os
 import sys
 import time
 
 from tracker import controllo, db, notifier, scraper
-
-
-def _soglia():
-    notifier.carica_env()
-    try:
-        return float(os.environ.get("MIN_DROP_PERCENT", "1.0"))
-    except ValueError:
-        return 1.0
 
 
 async def cmd_add(args):
@@ -75,7 +66,7 @@ async def cmd_remove(args):
 async def cmd_check(args):
     conn = db.connect()
     inizio = time.monotonic()
-    esiti = await controllo.controlla(conn, _soglia())
+    esiti = await controllo.controlla(conn, controllo.soglia_minima())
     if not esiti:
         print("Nessun prodotto da controllare.")
         return 0

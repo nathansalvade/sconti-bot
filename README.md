@@ -12,7 +12,8 @@ Segue i prezzi di pagine prodotto su e-commerce generici e ti scrive su Telegram
 - **Storico prezzi** in SQLite, così sai anche qual è il minimo storico.
 - **Riepilogo periodico**: oltre agli avvisi sui cali, puoi farti mandare un riepilogo di
   tutti i prodotti seguiti a cadenza giornaliera o settimanale.
-- **Niente spam**: notifica solo su un calo reale e non ripete lo stesso prezzo.
+- **Niente spam**: notifica solo su un calo reale (di almeno `MIN_DROP_PERCENT`) e non
+  ripete lo stesso prezzo.
 
 ## Setup (5 minuti)
 
@@ -65,6 +66,19 @@ Da qui in poi fai tutto da Telegram:
 
 Il bot ricontrolla da solo ogni `CHECK_INTERVAL_HOURS` ore (default 6) e ti scrive quando
 un prezzo cala. Non serve cron: il job periodico gira nello stesso processo.
+
+### Soglia minima di calo
+
+`MIN_DROP_PERCENT` (default `1.0`) è la percentuale minima di calo, rispetto all'ultimo
+prezzo registrato, sotto la quale il bot non avvisa. È una **percentuale**, non un valore
+assoluto: con il default, un prodotto da 200 CHF deve calare di almeno 2 CHF per far
+scattare l'avviso.
+
+`0` significa "avvisami su qualsiasi calo reale" — non "notifica sempre": un prezzo
+invariato o in aumento non fa comunque scattare l'avviso. Un valore negativo o non
+numerico non ha senso (finirebbe per premiare gli aumenti di prezzo) e ricade sul
+default. Il `prezzo_target` di un prodotto, quando impostato con `/add <url> <prezzo>`,
+scavalca sempre la soglia: se il prezzo scende sotto il target l'avviso parte comunque.
 
 ### Riepilogo prezzi periodico
 
@@ -209,6 +223,7 @@ config/sites.json     selettori CSS per dominio (esempio, personalizzalo)
 deploy/sconti-bot.service  file di servizio systemd di esempio
 test_concorrenza.py   test del semaforo e del ritmo per dominio
 test_comandi.py       test dell'autorizzazione dei comandi
+test_soglia.py        test della soglia minima di calo (MIN_DROP_PERCENT)
 .env                  token e chat id (non committare — è in .gitignore)
 ```
 

@@ -208,8 +208,7 @@ async def _giro_di_controllo(context: ContextTypes.DEFAULT_TYPE, silenzioso=True
     """Un giro completo: legge i prezzi in parallelo, notifica i cali, salva."""
     conn = db.connect()
     try:
-        soglia = _impostazione("MIN_DROP_PERCENT", 1.0)
-        esiti = await controllo.controlla(conn, soglia)
+        esiti = await controllo.controlla(conn, controllo.soglia_minima())
         if not esiti:
             return None
         for esito in esiti:
