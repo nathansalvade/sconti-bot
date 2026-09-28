@@ -16,7 +16,11 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from tracker import controllo, db, notifier, scraper
+from tracker import console_utf8, controllo, db, notifier, scraper
+
+# prima di configurare il logging: l'handler cattura lo stream così com'è in
+# questo momento, riconfigurarlo dopo non basterebbe più (vedi tracker/__init__.py)
+console_utf8()
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s — %(message)s",
                     level=logging.INFO)

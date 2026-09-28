@@ -12,8 +12,10 @@ import os
 import tempfile
 from pathlib import Path
 
-from tracker import controllo, db
+from tracker import console_utf8, controllo, db
 from tracker.scraper import Rilevazione
+
+console_utf8()
 
 
 class ScraperFinto:

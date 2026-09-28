@@ -16,7 +16,9 @@ import asyncio
 import sys
 import time
 
-from tracker import controllo, db, notifier, scraper
+from tracker import console_utf8, controllo, db, notifier, scraper
+
+console_utf8()
 
 
 async def cmd_add(args):

@@ -10,6 +10,13 @@ import asyncio
 import os
 import types
 
+from tracker import console_utf8
+
+# va chiamata prima di `import bot`: bot.py configura il logging a import-time
+# e l'handler cattura lo stream con la codifica del momento, quindi invertire
+# queste due righe fa tornare i caratteri corrotti nei log (vedi tracker/__init__.py)
+console_utf8()
+
 import bot as B
 
 

@@ -13,7 +13,10 @@ import time
 
 from aiohttp import web
 
+from tracker import console_utf8
 from tracker.scraper import Scraper
+
+console_utf8()
 
 RITARDO = 0.3           # quanto ci mette il "sito" a rispondere
 attive = 0
