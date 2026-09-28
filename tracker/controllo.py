@@ -4,6 +4,7 @@ Sta in un modulo suo perché lo usano sia il bot (job periodico) sia la CLI:
 la regola di "quando avvisare" dev'essere una sola.
 """
 
+import math
 import os
 from dataclasses import dataclass
 
@@ -11,6 +12,33 @@ from . import db, notifier
 from .scraper import Rilevazione, Scraper, ScrapeError
 
 SOGLIA_PREDEFINITA = 1.0  # percentuale: usata se MIN_DROP_PERCENT manca o non è valida
+# le parole con cui si toglie l'obiettivo, le stesse con cui si spegne /notifiche
+SPEGNIMENTO = {"mai", "off", "no", "-"}
+
+
+def leggi_obiettivo(testo):
+    """Interpreta l'argomento di /target, per il bot e per la CLI insieme.
+
+    Ritorna `(target, errore)`. Se `errore` è None l'input va bene, e `target` è
+    il prezzo obiettivo oppure None quando l'obiettivo va tolto.
+
+    Sta qui, accanto alla regola di "quando avvisare", perché i valori che
+    rifiuta sono esattamente quelli che la romperebbero: `inf` renderebbe
+    `sotto_target` sempre vera (avviso a ogni controllo), `nan` sempre falsa
+    (obiettivo che non scatta mai, in silenzio), e uno zero o un negativo non
+    sarebbero mai raggiungibili. `float()` accetta tutti e tre senza lamentarsi.
+    """
+    if testo.strip().lower() in SPEGNIMENTO:
+        return None, None
+    try:
+        valore = float(testo.replace(",", "."))
+    except ValueError:
+        return None, "Il prezzo obiettivo dev'essere un numero."
+    if not math.isfinite(valore):
+        return None, "Il prezzo obiettivo dev'essere un numero finito."
+    if valore <= 0:
+        return None, "L'obiettivo deve essere maggiore di zero: a zero non scatterebbe mai."
+    return valore, None
 
 
 @dataclass

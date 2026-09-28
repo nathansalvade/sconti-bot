@@ -58,6 +58,7 @@ Da qui in poi fai tutto da Telegram:
 ```
 /add <url> [prezzo]   segue un prodotto, con obiettivo opzionale
 /lista                i prodotti che segui
+/target <id> <prezzo> cambia l'obiettivo (o `mai` per toglierlo)
 /rimuovi <id>         smette di seguirne uno
 /controlla            controlla subito tutti i prezzi
 /notifiche            riepilogo prezzi giornaliero, settimanale o mai
@@ -77,8 +78,24 @@ scattare l'avviso.
 `0` significa "avvisami su qualsiasi calo reale" — non "notifica sempre": un prezzo
 invariato o in aumento non fa comunque scattare l'avviso. Un valore negativo o non
 numerico non ha senso (finirebbe per premiare gli aumenti di prezzo) e ricade sul
-default. Il `prezzo_target` di un prodotto, quando impostato con `/add <url> <prezzo>`,
-scavalca sempre la soglia: se il prezzo scende sotto il target l'avviso parte comunque.
+default. Il prezzo obiettivo di un prodotto scavalca sempre la soglia: se il prezzo
+scende sotto l'obiettivo l'avviso parte comunque.
+
+### Cambiare il prezzo obiettivo
+
+L'obiettivo si può impostare all'aggiunta (`/add <url> <prezzo>`) oppure cambiare dopo,
+senza perdere lo storico dei prezzi già raccolto:
+
+```
+/target 3 59.90     l'obiettivo del prodotto [3] diventa 59.90
+/target 3 mai       gli toglie l'obiettivo (accetta anche `off`, `no`, `-`)
+```
+
+Cambiare l'obiettivo **azzera la memoria dell'ultimo avviso** per quel prodotto. Serve,
+altrimenti un obiettivo nuovo potrebbe non scattare mai: il bot non ripete un avviso per
+un prezzo che ha già annunciato, quindi se metti un obiettivo sopra il prezzo attuale di
+un prodotto di cui ti aveva già segnalato il calo, senza l'azzeramento resterebbe zitto.
+In pratica: appena cambi obiettivo, il prossimo controllo riparte con la lavagna pulita.
 
 ### Riepilogo prezzi periodico
 
@@ -150,6 +167,7 @@ Comoda per provare i selettori di un sito senza far girare il bot:
 ```bash
 .venv/bin/python main.py add "https://www.esempio-shop.it/prodotto-123" --target 50
 .venv/bin/python main.py list
+.venv/bin/python main.py target 1 45       # cambia l'obiettivo ('mai' per toglierlo)
 .venv/bin/python main.py check --dry-run   # controlla senza inviare niente
 ```
 
@@ -214,7 +232,7 @@ Il parsing HTML, che è CPU-bound, gira in `asyncio.to_thread` per non bloccare 
 
 ```
 bot.py                il bot Telegram: comandi + job periodici
-main.py               CLI (add / list / remove / check / test / chatid)
+main.py               CLI (add / list / target / remove / check / test / chatid)
 tracker/scraper.py    fetch asincrono + estrazione prezzo/titolo/valuta
 tracker/controllo.py  la regola di "quando avvisare", condivisa fra bot e CLI
 tracker/db.py         SQLite: prodotti, storico prezzi, preferenze di notifica
@@ -224,6 +242,7 @@ deploy/sconti-bot.service  file di servizio systemd di esempio
 test_concorrenza.py   test del semaforo e del ritmo per dominio
 test_comandi.py       test dell'autorizzazione dei comandi
 test_soglia.py        test della soglia minima di calo (MIN_DROP_PERCENT)
+test_target.py        test di /target e dell'azzeramento dell'ultimo avviso
 .env                  token e chat id (non committare — è in .gitignore)
 ```
 

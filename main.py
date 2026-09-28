@@ -3,6 +3,7 @@
 
     python main.py add <url> [--target 49.90]
     python main.py list
+    python main.py target <id> <prezzo|mai>
     python main.py remove <id>
     python main.py check [--dry-run]
     python main.py test          messaggio di prova su Telegram
@@ -65,6 +66,21 @@ async def cmd_remove(args):
     return 0
 
 
+async def cmd_target(args):
+    target, errore = controllo.leggi_obiettivo(args.prezzo)
+    if errore:
+        print(errore)
+        return 1
+
+    conn = db.connect()
+    if not db.imposta_target(conn, args.id, target):
+        print("id non trovato")
+        return 1
+    print(f"✓ obiettivo rimosso da [{args.id}]" if target is None
+          else f"✓ [{args.id}] obiettivo {target:.2f}")
+    return 0
+
+
 async def cmd_check(args):
     conn = db.connect()
     inizio = time.monotonic()
@@ -124,6 +140,11 @@ def main():
     p.set_defaults(func=cmd_add)
 
     sub.add_parser("list", help="elenca i prodotti").set_defaults(func=cmd_list)
+
+    p = sub.add_parser("target", help="cambia il prezzo obiettivo di un prodotto")
+    p.add_argument("id", type=int)
+    p.add_argument("prezzo", help="il nuovo obiettivo, oppure 'mai' per toglierlo")
+    p.set_defaults(func=cmd_target)
 
     p = sub.add_parser("remove", help="rimuove un prodotto")
     p.add_argument("id", type=int)

@@ -7,6 +7,7 @@ Resta in ascolto dei comandi e, in parallelo, ricontrolla i prezzi ogni
 CHECK_INTERVAL_HOURS ore. Un solo processo: niente cron.
 """
 
+import html
 import logging
 import os
 from datetime import datetime, timedelta
@@ -31,6 +32,7 @@ AIUTO = (
     "🏷 <b>sconti-bot</b>\n\n"
     "<b>/add</b> <i>url</i> [<i>prezzo</i>] — segue un prodotto, con obiettivo opzionale\n"
     "<b>/lista</b> — i prodotti che segui\n"
+    "<b>/target</b> <i>id</i> <i>prezzo</i>|<i>mai</i> — cambia o toglie l'obiettivo\n"
     "<b>/rimuovi</b> <i>id</i> — smette di seguirne uno\n"
     "<b>/controlla</b> — controlla subito tutti i prezzi\n"
     "<b>/notifiche</b> [<i>giornaliero|settimanale|mai</i>] — riepilogo prezzi periodico\n"
@@ -179,6 +181,57 @@ async def cmd_notifiche(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @solo_proprietario
+async def cmd_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cambia l'obiettivo di un prodotto già seguito, senza perderne lo storico."""
+    uso = ("Uso: /target <id> <prezzo>   oppure   /target <id> mai\n"
+           "(l'id lo vedi in /lista)")
+    # esattamente due argomenti: con più di due qualcosa è stato frainteso, e
+    # ignorare in silenzio l'eccesso è il modo per far credere all'utente che
+    # l'obiettivo sia quello che ha scritto per ultimo
+    if len(context.args) != 2 or not context.args[0].isdigit():
+        await update.effective_message.reply_text(uso)
+        return
+
+    pid = int(context.args[0])
+    target, errore = controllo.leggi_obiettivo(context.args[1])
+    if errore:
+        await update.effective_message.reply_text(errore)
+        return
+
+    conn = db.connect()
+    try:
+        riga = conn.execute(
+            "SELECT titolo, url, valuta, ultimo_prezzo FROM prodotti WHERE id = ?", (pid,)
+        ).fetchone()
+        if riga is None:
+            await update.effective_message.reply_text("id non trovato")
+            return
+        db.imposta_target(conn, pid, target)
+
+        nome = html.escape((riga["titolo"] or riga["url"])[:60])
+        val = riga["valuta"]
+        if target is None:
+            await update.effective_message.reply_text(
+                f"✓ obiettivo rimosso da <b>[{pid}]</b> {nome}.\n"
+                "Ti avviso comunque quando il prezzo cala.",
+                parse_mode=ParseMode.HTML,
+            )
+            return
+
+        testo = f"✓ <b>[{pid}]</b> {nome}\n🎯 obiettivo {target:.2f} {val}"
+        ora = riga["ultimo_prezzo"]
+        if ora:
+            if ora <= target:
+                testo += (f"\nIl prezzo adesso è {ora:.2f} {val}: già sotto l'obiettivo, "
+                          "te lo segnalo al prossimo controllo.")
+            else:
+                testo += f"\nAdesso è {ora:.2f} {val}: mancano {ora - target:.2f} {val}."
+        await update.effective_message.reply_text(testo, parse_mode=ParseMode.HTML)
+    finally:
+        conn.close()
+
+
+@solo_proprietario
 async def cmd_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args or not context.args[0].isdigit():
         await update.effective_message.reply_text("Uso: /rimuovi <id>  (l'id lo vedi in /lista)")
@@ -292,6 +345,7 @@ def main():
     app.add_handler(CommandHandler(["start", "aiuto", "help"], cmd_start))
     app.add_handler(CommandHandler("add", cmd_add))
     app.add_handler(CommandHandler(["lista", "list"], cmd_lista))
+    app.add_handler(CommandHandler(["target", "obiettivo"], cmd_target))
     app.add_handler(CommandHandler(["rimuovi", "remove"], cmd_rimuovi))
     app.add_handler(CommandHandler(["controlla", "check"], cmd_controlla))
     app.add_handler(CommandHandler(["notifiche", "report"], cmd_notifiche))

@@ -73,6 +73,27 @@ def rimuovi(conn, prodotto_id):
     return cur.rowcount
 
 
+def imposta_target(conn, prodotto_id, prezzo_target):
+    """Cambia il prezzo obiettivo di un prodotto già seguito (`None` lo toglie).
+
+    Azzera anche `prezzo_avvisato`, e non è un dettaglio: la regola in
+    `controllo.controlla` sopprime un avviso quando il prezzo è >= a quello già
+    annunciato. Senza l'azzeramento, un obiettivo impostato SOPRA il prezzo
+    attuale di un prodotto già notificato non scatterebbe mai — `sotto_target`
+    sarebbe vera e `gia_visto` la annullerebbe. Un obiettivo nuovo è
+    un'intenzione nuova: la memoria dell'ultimo avviso si riferisce alla regola
+    vecchia e va dimenticata.
+
+    Ritorna il numero di righe toccate: 0 se l'id non esiste.
+    """
+    cur = conn.execute(
+        "UPDATE prodotti SET prezzo_target = ?, prezzo_avvisato = NULL WHERE id = ?",
+        (prezzo_target, prodotto_id),
+    )
+    conn.commit()
+    return cur.rowcount
+
+
 def registra_prezzo(conn, prodotto_id, prezzo, titolo=None, avvisato=None):
     """Salva la rilevazione nello storico e aggiorna lo stato del prodotto."""
     conn.execute(
